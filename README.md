@@ -1,11 +1,12 @@
 --[[
 ✅ Script para Arceus X e similares
 🛡️ Botão neutro, seguro e móvel
-📌 Teleporta para player com 0 de HP por 2s e volta
+📌 Teleporta e gruda no player morto por 2s, depois volta pro lugar original
 🧱 Tool que remove paredes ao clicar
 ]]
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
@@ -17,7 +18,7 @@ pcall(function()
     end
 end)
 
--- 🖱️ Criar botão quadrado seguro (visual de botão de erro padrão)
+-- 🖱️ Criar botão seguro
 local CoreGui = game:GetService("CoreGui")
 local gui = Instance.new("ScreenGui", CoreGui)
 gui.Name = "SafeNeutralGUI"
@@ -30,16 +31,13 @@ button.Position = UDim2.new(0.5, -50, 0.5, -20)
 button.Text = ""
 button.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
 button.BorderSizePixel = 2
-button.BorderColor3 = Color3.fromRGB(0, 150, 255) -- azul claro estilo erro do sistema
+button.BorderColor3 = Color3.fromRGB(0, 150, 255)
 button.AutoButtonColor = false
 button.Draggable = true
 button.Active = true
 button.Parent = gui
 
--- 👣 Teleporte rápido para jogador morto
-local busy = false
-local lastPos
-
+-- 👣 Função para localizar o player morto mais próximo
 local function getDeadPlayer()
     local closest, dist = nil, math.huge
     for _, p in pairs(Players:GetPlayers()) do
@@ -56,6 +54,10 @@ local function getDeadPlayer()
     return closest
 end
 
+-- 👣 Teleportar, grudar por 2s e voltar
+local busy = false
+local lastPos
+
 button.MouseButton1Click:Connect(function()
     if busy then return end
     busy = true
@@ -66,17 +68,34 @@ button.MouseButton1Click:Connect(function()
         return
     end
 
-    lastPos = char.HumanoidRootPart.CFrame
     local target = getDeadPlayer()
     if target then
+        lastPos = char.HumanoidRootPart.CFrame
+
+        -- Teleportar pro alvo
         char.HumanoidRootPart.CFrame = target.CFrame + Vector3.new(0, 2, 0)
+
+        -- Grudar por 2 segundos
+        local connection
+        connection = RunService.Heartbeat:Connect(function()
+            if target and char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = target.CFrame + Vector3.new(0, 2, 0)
+            end
+        end)
+
         wait(2)
+
+        -- Desgrudar e voltar pro lugar de antes
+        if connection then
+            connection:Disconnect()
+        end
         char.HumanoidRootPart.CFrame = lastPos
     end
+
     busy = false
 end)
 
--- 🛠️ Tool na Backpack que destrói obstáculos
+-- 🧱 Tool para quebrar paredes
 local tool = Instance.new("Tool")
 tool.Name = "WallBreaker"
 tool.RequiresHandle = false
